@@ -1,0 +1,3 @@
+deps/
+rel/
+!/rel/reltool.config
