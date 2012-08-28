@@ -1,6 +1,6 @@
-# Configurable values
+## Configurable values
+# Node ID. Unique per system. Lowercase-only.
 NODE := saloon_demo
-#/Configurable values
 
 init:
 	date 
@@ -12,6 +12,7 @@ init:
 	../rebar create-node nodeid=$(NODE)
 
 	sed ./reltool.config -e 's,saloon_demo,$(NODE),' > ./rel/reltool.conf
+	sed ./dev.sh.demo -e 's,saloon_demo_dev,$(NODE)_dev,' > ./dev.sh
 
 	date
 

@@ -4,24 +4,23 @@
 
 -export([init/3, handle/2, terminate/2]).
 
--include_lib("../../core/saloon/include/user.hrl").
+-include_lib("../../deps/saloon/include/user.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 init({_Any, http}, Req, [Type]) ->
 	saloon_init:prepare(Req),
 	io:format("Initializing saloon_user with ~p~n", [Type]),
-	{ok, Req, undefined}.
+	{ok, Req, Type}.
 
-handle(Req, State) ->
+handle(Req, "register") ->
 	{ok, Rep} = case cowboy_http_req:method(Req) of
 		{'GET', _} ->
-			saloon_ctx:fill(),
 			cowboy_http_req:reply(
-				200, [], mustache:render(fril_register_view, "view/index.mustache"), Req
+				200, [], fril_register_view:get([]), Req
 			);
 		{'POST', _} ->
 			case validate_registration(Req) of
 				{ok, {Profile, EncPassword}} -> 
-					saloon_ctx:fill(),
 					cowboy_http_req:reply(
 						302, 
 						[
@@ -35,14 +34,56 @@ handle(Req, State) ->
 						Req
 					);
 				{error, Er} -> 
-					saloon_ctx:errors(Er),
-					saloon_ctx:fill(),
+					ErrorProplist = [[{text, ErrorText}] || ErrorText <- Er],
+					?debugFmt("ErrorProplist: ~p~n", [ErrorProplist]),
 					cowboy_http_req:reply(
-						200, [], mustache:render(fril_register_view, "view/index.mustache"), Req
+						200, [], fril_register_view:get([{errors, ErrorProplist}]), Req
 					)
 			end
 	end,
-	{ok, Rep, State}.
+	{ok, Rep, ok};
+
+handle(Req, "logout") -> 
+	{ok, Rep} =
+		cowboy_http_req:reply(
+				302, 
+				[
+					{<<"Location">>, <<"/">>},	
+					cowboy_cookies:cookie(
+						<<"auth">>, 
+						<<"">>,
+						[]
+					)
+				], <<"Redirecting...">>,
+				Req
+			),
+	{ok, Rep, ok};
+
+handle(Req, "login") ->
+	fril_main_view:get([]),
+	Result = case saloon_auth:login(saloon_util:pk(<<"email">>, Req), saloon_util:md5(saloon_util:pk(<<"password">>, Req))) of
+		false -> 
+			Rendered = fril_main_view:get([{errors, [<<"wrong password">>]}]),
+			cowboy_http_req:reply(200, [], Rendered, Req);
+		Cookie -> 
+			{ok, Z} =
+				cowboy_http_req:reply(
+					302, 
+					[
+						{<<"Location">>, <<"/">>},	
+						cowboy_cookies:cookie(
+							<<"auth">>, 
+							saloon_util:to_binary(Cookie),
+							[]
+						)
+					], <<"Redirecting...">>,
+					Req
+				),
+			Z
+	end,
+	{ok, Result, ok}.
+
+
 
 terminate(_R, _S) ->
 	ok.
@@ -53,25 +94,39 @@ terminate(_R, _S) ->
 %%
 
 validate_registration(Req) ->
+	%% validation
 	BodyQs = element(1, cowboy_http_req:body_qs(Req)),
-	Unfilled = [{X, <<"unfilled">>} || {X, Y} <- BodyQs, Y == <<"">>],
+	Unfilled = [X || {X, Y} <- BodyQs, Y == <<"">>],
 	Mismatch = case saloon_util:pk(<<"password">>, Req) == saloon_util:pk(<<"confirm">>, Req) of
-		false -> [{<<"passwords">>, <<"dont_match">>}];
+		false -> [<<"passwords dont match">>];
 		_ -> []
 	end,
 	Unconfirmed = case saloon_util:pk(<<"agree">>, Req) of
-		undefined -> [{<<"obey">>, <<"eula">>}];
+		undefined -> [<<"obey eula">>];
 		_ -> []
 	end,
-	NameTaken = [], %% TODO: FIXME - now it just doesn't register user and redirects to /
+	NameTaken = case fission_syn:get({user, saloon_util:pk(<<"email">>, Req), id}) of
+		false -> [];
+		_     -> [<<"email taken">>]
+	end,
 	EmailInvalid = [], %% TODO: FIXME - now isn't checked!
+
+	%% building role list
+	Role1 = case saloon_util:pk(<<"is_freelancer">>, Req) of 
+		undefined -> [];
+		_         -> [freelancer]
+	end,
+	Role2 = case saloon_util:pk(<<"is_employer">>, Req) of
+		undefined -> [];
+		_         -> [employer]
+	end,
 	case Unfilled ++ Mismatch ++ Unconfirmed ++ NameTaken ++ EmailInvalid of 
 		[] -> {ok, {
 					#profile{
 						firstname=saloon_util:pk(<<"first_name">>, Req),
 						lastname=saloon_util:pk(<<"last_name">>, Req),
 						email=saloon_util:pk(<<"email">>, Req),
-						roles=[user]
+						roles=Role1++Role2++[user]
 					}, saloon_util:md5(saloon_util:pk(<<"password">>, Req))
 				}};
 		Error -> {error, Error}

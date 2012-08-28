@@ -1,0 +1,1 @@
+erl -pa ebin ./deps/*/ebin ./site/ebin -name saloon_demo_dev@127.0.0.1 -boot start_sasl -run make all load -devmode 1 -s saloon_app

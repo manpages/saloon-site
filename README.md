@@ -12,7 +12,8 @@ Installation
 Clone the repository then ```make init```.
 
 This command will initialize node with name ```saloon_demo```, download
-dependencies and compile everything.
+dependencies and compile everything. Please note that the node name can
+be configured by changing NODE variable in the Makefile.
 
 The installation is local.
 
