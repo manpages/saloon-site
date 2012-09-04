@@ -7,11 +7,11 @@
 -include_lib("eunit/include/eunit.hrl").
 
 init({_Any, http}, Req, []) ->
-	?debugMsg("init"),
 	saloon_init:prepare(Req),
-	{ok, Req, 0}.
+	{State, _} = cowboy_http_req:path_info(Req),
+	{ok, Req, State}.
 
-handle(Req, State) ->
+handle(Req, _State) ->
 	%% Inline example:
 	% Profile = myproject_user_model:profile(saloon_ctx:user()),
 	% Rendered = myproject_main_view:get(State),
