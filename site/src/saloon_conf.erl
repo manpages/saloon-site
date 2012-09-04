@@ -19,6 +19,7 @@ dispatch() ->
 				 {[<<"register">>, '...'], saloon_user, ["register"]}
 				,{[<<"login">>, '...'], saloon_user, ["login"]}
 				,{[<<"logout">>, '...'], saloon_user, ["logout"]}
+				,{[<<"upload">>, '...'], saloon_upload, []}
 
 				%%
 				%% Default handlers
@@ -27,7 +28,7 @@ dispatch() ->
 				,{[<<"static">>, '...'], cowboy_http_static, 
 					[
 						 {directory, <<"./static">>}
-						,{mimetypes, [
+						,{mimetypes, [ %% You might want to add mimes for images/videos etc.
 								 {<<".txt">>, [<<"text/plain">>]}
 								,{<<".html">>, [<<"text/html">>]}
 								,{<<".htm">>, [<<"text/html">>]}
@@ -42,7 +43,7 @@ dispatch() ->
 
 languages() -> [en, ru, lv].
 
-port() -> 50607.
+port() -> 55556.
 
 %%
 %% Initial data for production installations K->V

@@ -17,7 +17,7 @@ handle(Req, State) ->
 	% Rendered = myproject_main_view:get(State),
 	%%/Inline example
 
-	saloon_http:return(<<"<h1>It works!</h1>">>, Req).
+	saloon_http:return(<<"<h1>File upload demo!</h1>">>, Req).
 
 terminate(_R, _S) ->
 	ok.
