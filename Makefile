@@ -8,7 +8,7 @@ init:
 	./rebar get-deps
 	./rebar compile
 
-	id [ ! -d "rel" ] ; then mkdir "rel" ; fi
+	if [ ! -d "rel" ] ; then mkdir "rel" ; fi
 	cd rel ;\
 	../rebar create-node nodeid=$(NODE)
 
